@@ -78,6 +78,7 @@ export class ProductsService {
         select: {
           id: true,
           slots: {
+            distinct: ['startDate'],
             orderBy: {
               startDate: 'asc',
             },

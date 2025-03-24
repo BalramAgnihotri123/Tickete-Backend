@@ -3,7 +3,7 @@
 ### _Overview_
 _The Inventory Sync API Integration is designed to keep product availability data up-to-date by interfacing with a new API partner. This ensures that customers have access to accurate inventory information._
 
-## API Deployment
+## **1. API Deployment**
 
 All APIs are live and accessible at:
 
@@ -28,7 +28,7 @@ For any issues or inquiries, feel free to reach out!
 
 ---
 
-## **Database Schema**
+## **2. Database Schema**
 1. **Product Model**
    - **Attributes:** Product ID, Name, Availability (by date), Time Slot Types.
 
@@ -54,7 +54,7 @@ _This design ensures that the inventory data remains accurate and up-to-date, wi
 
 ---
 
-## **Inventory Synchronization Jobs**
+## **3. Inventory Synchronization Jobs**
 1. **30-Day Inventory Sync**
    - **Schedule:** Daily at Midnight.
    - **Function:** Updates inventory for the next 30 days.
@@ -72,7 +72,7 @@ _This design ensures that the inventory data remains accurate and up-to-date, wi
 
 ---
 
-## **Throttling, Queueing, and Rate-Limiting System**
+## **4. Throttling, Queueing, and Rate-Limiting System**
 
 ---    
 The system uses **Bottleneck**, a lightweight and robust rate limiter, to ensure controlled API calls with proper throttling. This is implemented to:  
@@ -128,7 +128,7 @@ ThrottlerModule.forRoot([{
 
 ---
 
-## **API ENDPOINTS** (__PREFIX:__ ```/api/v1 ```)
+## **5. API ENDPOINTS** (__PREFIX:__ ```/api/v1 ```)
 
 ### Get All Products
 **Endpoint:** `GET /products`
@@ -288,3 +288,60 @@ Fetches available slots for a specific product on a given date.
 Each API follows proper error handling, returning appropriate status codes and messages in case of failures.
 
 ---
+
+
+## **6. Optimizations**
+---
+> _I have applied some of these optimizations already in the code_
+
+### Avoid Blocking the Event Loop (Integrated)
+* Use asynchronous functions (async/await) in your cron jobs to prevent blocking the main thread.
+
+* Perform heavy computations in a separate worker process using BullMQ or worker threads.
+
+### Use a Job Queue for Background Tasks (limiter integrated for External API calls, can be duplicated for cron-jobs)
+* Instead of executing all cron jobs in-memory, use BullMQ or Bottleneck (limiter) (Redis-backed queues) to schedule and queue and manage jobs efficiently.
+
+* This will ensure job retries, delayed execution, and better scalability.
+
+```typescript
+import { Process, Processor } from '@nestjs/bull';
+import { Job } from 'bull';
+
+@Processor('job-queue')
+export class JobProcessor {
+  @Process()
+  async handleJob(job: Job) {
+    console.log(`Processing job with data:`, job.data);
+  }
+}
+```
+### Monitoring and Alerts
+ * Notifying users by Slack, email, or SMS in the event that jobs or APIs fail repeatedly.
+
+* To track cron job execution timings and failures, use New Relic or Prometheus + Grafana.
+
+### Cron Jobs with Dynamic Scheduling (partially integrated)
+
+* Dynamically load cron jobs at runtime by storing them in a database.
+
+* This makes it possible to create customizable cron schedules without changing the code.
+
+### Caching for Faster Responses
+Reduce the number of database requests by using Redis to cache frequently requested data. Use in-memory caching for data that is session-based.
+
+Can use NestJS's Cache Interceptors to cache API responses.
+
+Example:
+```typescript
+import { CacheInterceptor, CacheModule } from '@nestjs/cache-manager';
+
+@UseInterceptors(CacheInterceptor)
+@Controller('products')
+export class ProductsController {
+  @Get()
+  async getProducts() {
+    return this.productService.findAll();
+  }
+}
+```
