@@ -1,98 +1,290 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# **📦 Inventory Sync API Integration 📦**
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+### _Overview_
+_The Inventory Sync API Integration is designed to keep product availability data up-to-date by interfacing with a new API partner. This ensures that customers have access to accurate inventory information._
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## API Deployment
 
-## Description
+All APIs are live and accessible at:
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+**[Tickete Backend - Deployed on Render](https://tickete-backend.onrender.com)**
 
-## Project setup
+> **Note:** Since this is a free-tier deployment, the first request may take up to **1 minute** to initialize the system. However, subsequent requests will process at normal speed.
 
-```bash
-$ npm install
+### Usage Instructions
+- Ensure that the backend is up by making an initial request.
+- Once the backend is active, subsequent API calls will have normal response times.
+
+For detailed API documentation and endpoints, refer to the relevant sections below.
+
+---
+
+#### 📌 Additional Information
+- **Hosting Platform:** Render
+- **API Status:** Deployed & Live
+- **Expected Latency (First Call):** ~60 seconds
+
+For any issues or inquiries, feel free to reach out!
+
+---
+
+## **Database Schema**
+1. **Product Model**
+   - **Attributes:** Product ID, Name, Availability (by date), Time Slot Types.
+
+2. **Slot Model**
+   - **Attributes:** Slot ID, Start Time, End Time, Provider Slot ID, Availability, Pricing Details.
+
+3. **Pax Model**
+   - **Attributes:** Type, ID, Category, Availability Constraints.
+
+4. **Pax Availability Model**
+   - **Description:** Links Slots and Pax Types.
+   - **Attributes:** Slot ID, Passenger Type ID, Remaining Availability, Pricing.
+
+5. **Price Model**
+   - **Attributes:** Price ID, Amount, Discounts, Currency.
+
+6. **CronJob Model**
+   - **Attributes:** Job ID, Name, Schedule, Enabled/Disabled Status, Execution Logs.
+
+
+_This design ensures that the inventory data remains accurate and up-to-date, with flexibility for manual overrides and robust error handling to maintain data integrity. If you need more detailed implementation guidance or specific code examples, feel free to ask!_
+
+
+---
+
+## **Inventory Synchronization Jobs**
+1. **30-Day Inventory Sync**
+   - **Schedule:** Daily at Midnight.
+   - **Function:** Updates inventory for the next 30 days.
+   - **Features:** Can be manually triggered, skips if disabled.
+
+2. **7-Day Inventory Sync**
+   - **Schedule:** Every 4 Hours.
+   - **Function:** Updates inventory for the upcoming 7 days.
+   - **Features:** Manually triggerable, checks enabled status.
+
+3. **Same-Day Inventory Sync**
+   - **Schedule:** Every 15 Minutes.
+   - **Function:** Ensures real-time accuracy for the current day.
+   - **Features:** Immediate execution possible, controlled via database settings.
+
+---
+
+## **Throttling, Queueing, and Rate-Limiting System**
+
+---    
+The system uses **Bottleneck**, a lightweight and robust rate limiter, to ensure controlled API calls with proper throttling. This is implemented to:  
+
+- Maintain **one API call per 2 seconds** (`minTime: 2100ms` ensures a small buffer).  
+- Prevent excessive load on external or internal services.  
+- Implement **automatic queuing** for API requests beyond the allowed rate.  
+
+### **Throttler Configuration**  
+```typescript
+private limiter = new Bottleneck({ minTime: 2100 });
+```
+- Ensures **one request per 2.1 seconds** (2100ms) per API call.  
+- Excess requests are **queued automatically** and executed in order.  
+
+#### *How It Works?*  
+
+- When syncing product inventory, the function **queues API calls** for fetching inventory.  
+- The `limiter.schedule()` method ensures that each request is executed **at least 2.1 seconds apart**.  
+- The system processes **all queued requests** sequentially, preventing API rate limits or service overload.  
+
+#### *Example Usage in Inventory Syncing* 
+
+```typescript
+const apiResponse = await this.limiter.schedule(() => 
+    this.fetchInventory(productId, formattedDate)
+);
+```
+- Instead of making **immediate API calls**, requests are queued and **executed one-by-one** with a 2-second delay.  
+- Prevents concurrent calls from overwhelming the external API.  
+---
+
+### **Rate Limiting**  
+- Rate limiting helps prevent API abuse by restricting the number of requests a client can make within a given time.
+
+- It enhances security, ensures fair usage, and protects server resources from overload.
+
+```typescript
+ThrottlerModule.forRoot([{
+  ttl: 60000, // 1 minute
+  limit: 30, // Max 30 requests per minute
+}]),
+```
+- Ensures a limit of **30 Requests per minute** for an API call.  
+- Excess requests are **squashed** and error is thrown as:
+
+```typescript
+{
+    "statusCode":429,
+    "message":"ThrottlerException: Too Many Requests"
+}
 ```
 
-## Compile and run the project
+---
 
-```bash
-# development
-$ npm run start
+## **API ENDPOINTS** (__PREFIX:__ ```/api/v1 ```)
 
-# watch mode
-$ npm run start:dev
+### Get All Products
+**Endpoint:** `GET /products`
 
-# production mode
-$ npm run start:prod
+**Description:**
+Retrieves a paginated list of products.
+
+**Query Parameters:**
+- `page` (optional, integer, default: 1) - The page number.
+- `limit` (optional, integer, default: 10) - Number of products per page.
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": 14,
+      "name": "Product Name",
+      "availableDays": ["MONDAY", "TUESDAY", "WEDNESDAY"],
+      "timeSlotType": "MULTI"
+    }, ...
+  ],
+  "totalLength": 100,
+  "page": 1,
+  "limit": 10,
+  "statusCode": 200
+}
 ```
 
-## Run tests
+---
 
-```bash
-# unit tests
-$ npm run test
+### Get Product by ID
+**Endpoint:** `GET /products/:productId`
 
-# e2e tests
-$ npm run test:e2e
+**Description:**
+Fetches details of a specific product by its ID.
 
-# test coverage
-$ npm run test:cov
+**Path Parameters:**
+- `productId` (required, integer) - ID of the product.
+
+**Response:**
+```json
+{
+  "data": {
+    "id": 14,
+      "name": "Product Name",
+      "availableDays": ["MONDAY", "TUESDAY", "WEDNESDAY"],
+      "timeSlotType": "MULTI"
+  },
+  "statusCode": 200
+}
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### Get Available Dates for a Product
+**Endpoint:** `GET /products/:productId/dates`
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+**Description:**
+Retrieves available dates for a given product.
 
-```bash
-$ npm install -g mau
-$ mau deploy
+**Path Parameters:**
+- `productId` (required, integer) - ID of the product.
+
+**Response:**
+```json
+{
+  "data": {
+    "dates": [
+      {
+        "date": "2025-03-24",
+        "price": {
+          "finalPrice": 100,
+          "originalPrice": 120,
+          "currencyCode": "USD"
+        }
+      }, ...
+    ]
+  },
+  "statusCode": 200
+}
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+---
 
-## Resources
+### Get Available Slots for a Product on a Specific Date
+**Endpoint:** `GET /products/:productId/slots`
 
-Check out a few resources that may come in handy when working with NestJS:
+**Description:**
+Fetches available slots for a specific product on a given date.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+**Path Parameters:**
+- `productId` (required, integer) - ID of the product.
 
-## Support
+**Query Parameters:**
+- `date` (required, string) - Date in `YYYY-MM-DD` format.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+**Response:**
+```json
+{
+  "data": {
+    "slots": [
+      {
+        "startTime": "10:00:00",
+        "startDate": "2025-03-24",
+        "remaining": 5,
+        "paxAvailability": [
+          {
+            "type": "Adult",
+            "name": "Standard Adult",
+            "description": "Adult Ticket",
+            "min": 1,
+            "max": 10,
+            "remaining": 5,
+            "price": {
+              "finalPrice": 100,
+              "originalPrice": 120,
+              "currencyCode": "USD"
+            }
+          }, ...
+        ]
+      }
+    ]
+  },
+  "statusCode": 200
+}
+```
 
-## Stay in touch
+### ADMIN APIs
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+---
 
-## License
+### GET `/admin/cron`
+- **Query Parameters:**
+  - `page` (number, default: 1)
+  - `limit` (number, default: 10)
+- **Description:** Fetch a paginated list of cron jobs.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### POST `/admin/cron/toggle`
+- **Body:**
+  - `name` (string)
+  - `status` (boolean)
+- **Description:** Toggle the status of a specified cron job.
+
+### GET `/admin/cron/trigger`
+- **Query Parameters:**
+  - `name` (string)
+- **Description:** Trigger the execution of a specified cron job.
+
+### GET `/admin/cron/sync`
+- **Query Parameters:**
+  - `daysToSync` (number, default: 1)
+- **Description:** Sync cron jobs for the next X days.
+
+---
+
+Each API follows proper error handling, returning appropriate status codes and messages in case of failures.
+
+---
