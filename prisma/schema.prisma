@@ -1,0 +1,95 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Enums
+enum Day {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum TimeSlotType {
+  SINGLE
+  MULTI
+}
+
+model Product {
+  id            Int          @id @default(autoincrement())
+  name          String?
+  availableDays Day[]
+  timeSlotType  TimeSlotType @default(SINGLE)
+
+  slots         Slot[]
+}
+
+model Slot {
+  id                Int                   @id @default(autoincrement())
+  product           Product               @relation(fields: [productId], references: [id])
+  productId         Int
+  
+  startDate         DateTime
+  startTime         String
+  endTime           String
+  providerSlotId    String                @unique
+  remaining         Int
+  currencyCode      String
+
+  paxAvailabilities PaxAvailability[]
+}
+
+model Pax {
+  id          Int                   @id @default(autoincrement())
+  type        String                @unique
+  name        String?
+  description String?
+  min         Int?
+  max         Int?
+
+  paxAvailabilities PaxAvailability[]
+}
+
+model PaxAvailability {
+  id          Int                   @id @default(autoincrement())
+  remaining   Int
+
+  slot        Slot                  @relation(fields: [slotId], references: [id])
+  slotId      Int
+
+  pax         Pax                   @relation(fields: [paxId], references: [id])
+  paxId       Int                   
+
+  price       Price                 @relation(fields: [priceId], references: [id])
+  priceId     Int
+
+  @@unique([slotId, paxId])
+}
+
+model Price {
+  id            Int               @id @default(autoincrement())
+  finalPrice    Float
+  originalPrice Float
+  currencyCode  String
+  discount      Float             @default(0) 
+  
+  paxAvailabilities PaxAvailability[]
+
+  @@unique([finalPrice, originalPrice, currencyCode])
+}
+
+model CronJob {
+  id             Int      @id @default(autoincrement())
+  name           String   @unique
+  isEnabled      Boolean  @default(true)
+  lastExecuted   DateTime?
+  nextExecution  DateTime?
+}
