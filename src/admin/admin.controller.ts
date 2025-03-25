@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, HttpException, HttpStatus, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, HttpException, HttpStatus, Query, ParseIntPipe, DefaultValuePipe, Put } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { Logger } from '@nestjs/common';
 import { IResponse } from 'src/common/response.interface';
@@ -26,7 +26,7 @@ export class AdminController {
         }
     }
 
-    @Post('cron/toggle')
+    @Put('cron/toggle')
     async toggleCron(@Body() body: { name: string, status: boolean }): Promise<IResponse<IPage<any>>> {
         try {
             const result = await this.adminService.toggleCron(body.name, body.status);
