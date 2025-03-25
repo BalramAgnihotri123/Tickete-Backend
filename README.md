@@ -267,7 +267,7 @@ Fetches available slots for a specific product on a given date.
   - `limit` (number, default: 10)
 - **Description:** Fetch a paginated list of cron jobs.
 
-### POST `/admin/cron/toggle`
+### PUT `/admin/cron/toggle`
 - **Body:**
   - `name` (string)
   - `status` (boolean)
