@@ -1,7 +1,11 @@
+// nestjs
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { PrismaClient } from '@prisma/client';
 
+// modules
+import { AppModule } from './app.module';
+
+// prisma
+import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function bootstrap() {
@@ -23,6 +27,8 @@ async function bootstrap() {
        
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api/v1');
+  
+
   app.enableCors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],

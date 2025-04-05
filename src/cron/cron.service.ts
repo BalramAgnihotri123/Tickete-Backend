@@ -7,6 +7,7 @@ import { ProductsService } from 'src/products/products.service';
 import { CronJob, Day } from '@prisma/client';
 import { SlotData } from 'src/products/dto/';
 import { IPage } from 'src/common/pages.interface';
+import { formatDate } from 'src/utils/date.utils';
 
 @Injectable()
 export class CronService {
@@ -167,7 +168,7 @@ export class CronService {
    * description: formats date and processes slots with a limiter for throttling
    */
   private async processDateForProduct(productId: number, date: Date): Promise<void> {
-    const formattedDate = date.toISOString().split('T')[0];
+    const formattedDate = formatDate(date.toISOString());
     this.logger.log({ formattedDate });
     
     try {
@@ -178,7 +179,7 @@ export class CronService {
       if (apiResponse) {
         const slotDataArray = apiResponse as SlotData[];
         
-        // Process slots sequentially with async/await
+        // * WE CAN USE P-MAP TO PROCESS ALL SLOTS CONCURRENTLY INSTEAD OF SEQUENTIALLY / SEMI PARALLEL
         for (const slotData of slotDataArray) {
           try {
             await this.productsService.processInventorySlot(productId, slotData);

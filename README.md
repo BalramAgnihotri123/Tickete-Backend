@@ -42,9 +42,6 @@ For any issues or inquiries, feel free to reach out!
    - **Description:** Links Slots and Pax Types.
    - **Attributes:** Slot ID, Passenger Type ID, Remaining Availability, Pricing.
 
-5. **Price Model**
-   - **Attributes:** Price ID, Amount, Discounts, Currency.
-
 6. **CronJob Model**
    - **Attributes:** Job ID, Name, Schedule, Enabled/Disabled Status, Execution Logs.
 
