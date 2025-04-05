@@ -214,6 +214,7 @@ export class ProductsService {
     console.log("Processing slot data");
   
     try {
+      //! Transaction
       await this.prisma.$transaction(async (tx) => {
         const slot = await tx.slot.upsert({
           where: { providerSlotId: slotData.providerSlotId },

@@ -179,7 +179,7 @@ export class CronService {
       if (apiResponse) {
         const slotDataArray = apiResponse as SlotData[];
         
-        // Process slots sequentially with async/await
+        // * WE CAN USE P-MAP TO PROCESS ALL SLOTS CONCURRENTLY INSTEAD OF SEQUENTIALLY / SEMI PARALLEL
         for (const slotData of slotDataArray) {
           try {
             await this.productsService.processInventorySlot(productId, slotData);
