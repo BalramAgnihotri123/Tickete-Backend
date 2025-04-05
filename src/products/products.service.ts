@@ -10,6 +10,13 @@ import { formatDate, isValidDate } from '../utils/date.utils';
 export class ProductsService {
   constructor(private prisma: PrismaService) {}
 
+  async createProduct(product: Product): Promise<Product> {
+    return this.prisma.product.create({
+      data: product,
+    });
+  }
+  
+  
   /**
    * Get all products
    * @returns all products
@@ -84,7 +91,7 @@ export class ProductsService {
             },
             include: {
               paxAvailabilities: {
-                include: { pax: true, price: true },
+                include: { pax: true },
               },
             },
           },
@@ -101,9 +108,9 @@ export class ProductsService {
         availableDates.push({
           date: formatDate(startDate.toISOString()),
           price: {
-            finalPrice: slot.paxAvailabilities?.[0]?.price?.finalPrice ?? 0,
-            originalPrice: slot.paxAvailabilities?.[0]?.price?.originalPrice ?? 0,
-            currencyCode: slot.paxAvailabilities?.[0]?.price?.currencyCode ?? '',
+            finalPrice: slot.paxAvailabilities?.[0]?.finalPrice ?? 0,
+            originalPrice: slot.paxAvailabilities?.[0]?.originalPrice ?? 0,
+            currencyCode: slot.paxAvailabilities?.[0]?.currencyCode ?? '',
           },
         });
       })
@@ -148,7 +155,7 @@ export class ProductsService {
               startDate: true,
               remaining: true,
               paxAvailabilities: {
-                include: { pax: true, price: true },
+                include: { pax: true },
               },
             },
           },
@@ -172,9 +179,9 @@ export class ProductsService {
             max: pax.pax.max,
             remaining: pax.remaining,
             price: {
-              finalPrice: pax.price.finalPrice,
-              originalPrice: pax.price.originalPrice,
-              currencyCode: pax.price.currencyCode,
+              finalPrice: pax.finalPrice,
+              originalPrice: pax.originalPrice,
+              currencyCode: pax.currencyCode,
               },
             })),
         })),
@@ -229,23 +236,6 @@ export class ProductsService {
               return;
             }
             
-            // Upsert price
-            const price = await tx.price.upsert({
-              where: {
-                finalPrice_originalPrice_currencyCode: {
-                  finalPrice: pax.price.finalPrice,
-                  originalPrice: pax.price.originalPrice,
-                  currencyCode: pax.price.currencyCode,
-                },
-              },
-              update: {},
-              create: {
-                finalPrice: pax.price.finalPrice,
-                originalPrice: pax.price.originalPrice,
-                currencyCode: pax.price.currencyCode,
-              },
-            });
-  
             // Upsert pax
             const createdPax = await tx.pax.upsert({
               where: { type: pax.type },
@@ -264,20 +254,26 @@ export class ProductsService {
               },
             });
   
-            // Upsert pax availability
+            // Upsert pax availability with price information directly
             const paxAvailability = await tx.paxAvailability.upsert({
               where: {
                 slotId_paxId: { slotId: slot.id, paxId: createdPax.id },
               },
               update: {
                 remaining: pax.remaining,
-                priceId: price.id,
+                finalPrice: pax.price.finalPrice,
+                originalPrice: pax.price.originalPrice,
+                currencyCode: pax.price.currencyCode,
+                discount: pax.price.discount || 0,
               },
               create: {
                 slotId: slot.id,
                 paxId: createdPax.id,
                 remaining: pax.remaining,
-                priceId: price.id,
+                finalPrice: pax.price.finalPrice,
+                originalPrice: pax.price.originalPrice,
+                currencyCode: pax.price.currencyCode,
+                discount: pax.price.discount || 0,
               },
             });
             console.log("Pax availability created/updated", paxAvailability);
@@ -286,7 +282,7 @@ export class ProductsService {
   
         console.log("Slot processing complete!");
       }, {
-        timeout: 30000,
+        timeout: 50000,
         maxWait: 5000,
         isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted
       });

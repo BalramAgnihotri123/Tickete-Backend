@@ -68,22 +68,12 @@ model PaxAvailability {
   pax         Pax                   @relation(fields: [paxId], references: [id])
   paxId       Int                   
 
-  price       Price                 @relation(fields: [priceId], references: [id])
-  priceId     Int
-
-  @@unique([slotId, paxId])
-}
-
-model Price {
-  id            Int               @id @default(autoincrement())
   finalPrice    Float
   originalPrice Float
   currencyCode  String
-  discount      Float             @default(0) 
-  
-  paxAvailabilities PaxAvailability[]
+  discount      Float             @default(0)
 
-  @@unique([finalPrice, originalPrice, currencyCode])
+  @@unique([slotId, paxId])
 }
 
 model CronJob {

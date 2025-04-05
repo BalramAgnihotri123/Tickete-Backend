@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe, Query, HttpStatus, HttpException, DefaultValuePipe } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query, HttpStatus, HttpException, DefaultValuePipe, Post, Body } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { Product } from '@prisma/client';
 import { DateInventory, Slots } from './dto';
@@ -9,6 +9,21 @@ import { IResponse } from 'src/common/response.interface';
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
+  @Post()
+  async createProduct(@Body() product: Product): Promise<IResponse<IPage<Product>>> {
+    try {
+      const createdProduct = await this.productsService.createProduct(product);
+      if(!createdProduct) {
+        throw new HttpException("Product not created", HttpStatus.BAD_REQUEST);
+      }
+      return {data: { data: createdProduct }, statusCode: HttpStatus.CREATED};
+    } catch (error) {
+      throw new HttpException(
+        error.message ?? "Internal Error",
+        error.status ?? HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+  }
+  
   @Get()
   async getProducts(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page?: number, 

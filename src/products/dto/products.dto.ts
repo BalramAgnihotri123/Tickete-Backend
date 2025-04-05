@@ -3,6 +3,7 @@ interface PriceData {
     finalPrice: number;
     originalPrice: number;
     currencyCode: string;
+    discount?: number;
 }
   
 interface PaxAvailabilityData {

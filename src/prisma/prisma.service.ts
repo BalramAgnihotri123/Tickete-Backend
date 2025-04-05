@@ -14,7 +14,7 @@ export class PrismaService
         },
       },
       transactionOptions: {
-        timeout: 30000,
+        timeout: 50000,
         maxWait: 5000,
       },
     });
