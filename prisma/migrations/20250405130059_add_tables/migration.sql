@@ -62,11 +62,31 @@ CREATE TABLE "Price" (
     CONSTRAINT "Price_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "CronJob" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "isEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "lastExecuted" TIMESTAMP(3),
+    "nextExecution" TIMESTAMP(3),
+
+    CONSTRAINT "CronJob_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Slot_providerSlotId_key" ON "Slot"("providerSlotId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Pax_type_key" ON "Pax"("type");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PaxAvailability_slotId_paxId_key" ON "PaxAvailability"("slotId", "paxId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Price_finalPrice_originalPrice_currencyCode_key" ON "Price"("finalPrice", "originalPrice", "currencyCode");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CronJob_name_key" ON "CronJob"("name");
 
 -- AddForeignKey
 ALTER TABLE "Slot" ADD CONSTRAINT "Slot_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
